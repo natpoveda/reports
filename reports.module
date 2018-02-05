@@ -18,16 +18,6 @@ function reports_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
 
-  $items['admin/config/ccreports-all/abc'] = array(
-    'title' => 'Reportes consumo usuarios',
-    'description' => 'Contiene links de reportes de consumo',
-    'position' => 'right',
-    'weight' => -200,
-    'page callback' => 'system_admin_menu_block_page',
-    'access arguments' => array('administer site configuration'),
-    'file' => 'system.admin.inc',
-    'file path' => drupal_get_path('module', 'system'),
-  );
 
    $items['reports/monthly'] = array(
     'title'            => t('MONTHLY REPORTS'),
