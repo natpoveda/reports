@@ -1,0 +1,8 @@
+name = Reports
+description = General module for generating reports
+core = 7.x
+dependencies[] = views
+dependencies[] = orders
+dependencies[] = flag
+
+files[] = reports.module

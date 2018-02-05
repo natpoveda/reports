@@ -1,0 +1,333 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function reports_menu() {
+  $items= array();
+  
+
+  $items['admin/config/ccreports-all'] = array(
+    'title' => 'Reports Admin',
+    'description' => 'Reports link',
+    'position' => 'right',
+    'weight' => -200,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' =>TRUE,
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  $items['admin/config/ccreports-all/abc'] = array(
+    'title' => 'Reportes consumo usuarios',
+    'description' => 'Contiene links de reportes de consumo',
+    'position' => 'right',
+    'weight' => -200,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+   $items['reports/monthly'] = array(
+    'title'            => t('MONTHLY REPORTS'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('reports_monthly',),
+    'access arguments' => array('allReportsAdmin'),
+    'type'             => MENU_CALLBACK,
+   );
+
+    $items['reports/ranking'] = array(
+    'page callback' => 'reports_ranking',
+    'access callback' => TRUE,
+    'access arguments' => array('allReportsAdmin'),
+    'type' => MENU_CALLBACK,
+   );
+
+  $items['reports/userform'] = array(
+    'title'            => t('Users Form'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('report_form_user'),
+    'access arguments' => array('allReportsAdmin'),
+    'type'             => MENU_CALLBACK,
+  );  
+
+  $items['reports/example'] = array(
+    'page callback' => '_get_user_buyers',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['reports/monthly-table/%'] = array(
+    'page callback' => 'reports_monthly_table',
+    'access callback' => TRUE,
+    'page arguments' => array(2),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('allReportsAdmin'),
+  );
+
+
+return $items;
+
+}
+
+
+
+
+function reports_permission(){
+	return array(
+      'allReportsAdmin' =>  array(
+        'title' => t('Administer Reports'),
+        'description' => t('Administer variables employed by Reports'),
+      ),
+    );
+}
+
+
+/*
+ * Implmentacion de hook_block_info()
+ */
+function reports_block_info(){
+  $blocks   = array();
+  $blocks['rselect'] = array(
+    'info' => t('Reports'),
+  );
+  
+  return $blocks;
+}
+
+
+function reports_block_view($delta = ''){
+  $block = array();
+  switch ($delta) {
+    case 'rselect':
+      $block['subject'] = '';
+      $block['content'] =  _get_reports_list();
+      break;
+  }
+    return $block;
+}
+
+
+function _get_reports_list(){
+
+  $html .='<div class="rselect">';
+  $html .='<h3>REPORTS</h3>';
+  $html .='<h4><a href="reports/monthly"> MONTHLY </a></h4>';
+  $html .='<h4><a href="reports/userform">  USER  </a></h4>';
+  $html .='<h4><a href="reports/ranking"> RANKING </a></h4>';
+  $html .='</div>'; 
+
+  return $html;
+
+}
+
+
+
+function _get_user_buyers(){
+
+	$result = db_select('orders', 'n')
+	->distinct()
+    ->fields('n',array('uid'))
+    ->execute()
+    ->fetchAll();
+
+    foreach ($result as $res) {
+    	$uid = $res->uid;
+
+    	$result = db_select('users', 'u')
+	    ->fields('u',array('name'))
+	    ->condition('uid', $uid)
+	    ->execute()
+	    ->fetchAssoc();
+	    $username=$result['name'];
+
+		$arrayName = array('uid' => $uid,'name' => $username );
+		 
+    }
+
+    return $arrayName;
+
+    
+}
+
+
+ 
+function reports_monthly ($form, &$form_state){
+  $form = array();
+  
+  
+	$form['re']['selected'] = array(
+       '#type' => 'select',
+       '#title' => t('Selected'),
+       '#options' => array(
+          1 => t('January'),
+          2 => t('February'),
+          3 => t('March'),
+          4 => t('April'),
+          5 => t('May'),
+          6 => t('June'),
+          7 => t('July'),
+          8 => t('August'),
+          9 => t('September'),
+          10 => t('October'),
+          11 => t('November'),
+          12 => t('December'),
+       ),
+       
+       '#description' => t('Set this to get the monthly report.'),
+   );
+
+ 	
+
+	$form['re']['actions'] = array('#type' => 'actions');
+	$form['re']['actions']['submit'] = array(
+	    '#type'  => 'submit',
+	    '#value' => t('Submit'),
+	  );
+	$form['re']['actions']['cancel'] = array(
+	  '#type'  => 'submit',
+	  '#value' => t('Cancel'),
+	);
+
+  return $form;
+  
+}
+
+
+function reports_monthly_submit($form, &$form_state){
+	$items = $form_state['values'];
+	$month = $items['selected'];
+	$url = 'http://'.$_SERVER[HTTP_HOST].'/cupcakes/reports/monthly-table/'.$month;
+	drupal_goto($url);
+
+}
+
+
+function reports_monthly_table($month){
+print 'aaaa';
+    $resultq = 'SELECT * FROM orders WHERE MONTH(FROM_UNIXTIME(created))='.$month;
+
+	$result = db_query($resultq);
+	
+
+	$html = '
+		  <table style="width:100%">
+		  <tr>
+		    <th>Name</th>
+		    <th>Category</th> 
+		    <th>Quantity</th>
+		    <th>Precio</th>
+		  </tr>
+
+	';
+	foreach ($result as $record) {
+		$html .= '
+		  <tr>
+		    <td>'.$record->cname.'</td>
+		    <td>'.$record->typetax.'</td>
+		    <td>'.$record->cnumber.'</td>
+		    <td>'.$record->pinvoce.'USD</td>
+		  </tr>';
+	}
+
+	$html .='</table>';
+
+	print $html;
+	
+}
+
+
+
+function report_form_user($form, &$form_state){
+  $form = array();
+  $arrU =_get_user_buyers();
+  
+	$form['reu']['selected'] = array(
+       '#type' => 'select',
+       '#title' => t('Selected'),
+       '#options' => $arrU,
+       '#description' => t('Set this to get the user report.'),
+   );
+
+	$form['reu']['actions'] = array('#type' => 'actions');
+	$form['reu']['actions']['submit'] = array(
+	    '#type'  => 'submit',
+	    '#value' => t('Submit'),
+	  );
+	$form['reu']['actions']['cancel'] = array(
+	  '#type'  => 'submit',
+	  '#value' => t('Cancel'),
+	);
+
+  return $form;
+  
+}
+
+
+function report_form_user_submit($form, &$form_state){
+	$items = $form_state['values'];
+	$user = $items['selected'];
+	
+	$resultq = 'SELECT * FROM orders WHERE uid='.$user;
+	$result = db_query($resultq);
+
+
+
+	$html = '
+		  <table style="width:100%">
+		  <tr>
+		    <th>Name</th>
+		    <th>Category</th> 
+		    <th>Quantity</th>
+		    <th>Amount</th>
+		  </tr>
+
+	';
+	foreach ($result as $record) {
+		$html .= '
+		  <tr>
+		    <td>'.$record->cname.'</td>
+		    <td>'.$record->typetax.'</td>
+		    <td>'.$record->cnumber.'</td>
+		    <td>'.$record->pinvoce.'USD</td>
+		  </tr>';
+	}
+
+	$html .='</table>';
+
+	print $html;
+	
+}
+
+
+function reports_ranking(){
+
+	$resultq = 'SELECT cname,COUNT(cname) ccname,SUM(pinvoce) price  FROM orders   GROUP BY cname  ORDER BY ccname DESC';
+	$result = db_query($resultq);
+
+
+
+	$html = '
+		  <table style="width:100%">
+		  <tr>
+		    <th>Name</th>
+		    <th>Times</th> 
+		    <th>Amount</th>
+		  </tr>
+
+	';
+	foreach ($result as $record) {
+		$html .= '
+		  <tr>
+		    <td>'.$record->cname.'</td>
+		    <td>'.$record->ccname.'</td>
+		    <td>'.$record->price.'</td>
+		  </tr>';
+	}
+
+	$html .='</table>';
+
+	print $html;
+
+}
